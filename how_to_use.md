@@ -1,6 +1,5 @@
-
-Granular Economies
-==================
+Granular Economies code
+=======================
 
 How to compile
 --------------
