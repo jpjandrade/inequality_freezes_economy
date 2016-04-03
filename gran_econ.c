@@ -4,7 +4,7 @@
 
 //parameters
 #define PI_0 0.01 //price of cheapest good (pi_k = PI_0 * G^k)
-#define K 1 // number of different types of goods
+#define K 2 // number of different types of goods
 #define G 2 //granularity of goods
 #define C_MIN 1.    // minimal capital (not to bea changed)
 #define alpha 1.    // the exponent of the price distributioin is alwyas 1
@@ -17,7 +17,7 @@
 #define I_FOLLOW 0
 
 //Dynamic related
-#define T_TRIAL_STEPS 1000          // actual number of attempts at buying/selling that will be performed. (in millions). This is quite precisely proportional to the cpu time needed.
+#define T_TRIAL_STEPS 25000          // actual number of attempts at buying/selling that will be performed. (in millions). This is quite precisely proportional to the cpu time needed.
 
 int main(int argc, char *argv[]){
 
@@ -155,6 +155,7 @@ void run_trading_instance(int N, double * capital, double * cash, double * pct_s
   int good_traded;
   int total_trades, sum_trades, successful_trades[K], attempted_trades[K];
   double u, pi, total_capital, ps_inst;
+  double * cum_capital;
   double ** followed_hist;
   int *goods, *goods_type;
   int ** Z;
@@ -165,6 +166,7 @@ void run_trading_instance(int N, double * capital, double * cash, double * pct_s
   //builds the ownership matrix
   Z = malloc(sizeof(int*) * N);
   for(i=0; i<N; i++) Z[i] = malloc(sizeof(int) * K);
+  cum_capital = malloc(sizeof(int) * (N+1));
 
   double totalGoodsValue_perM;
   float GG = G;
@@ -174,12 +176,15 @@ void run_trading_instance(int N, double * capital, double * cash, double * pct_s
         M=M_user;
     }else{
       total_capital = 0;
+      cum_capital[0] = 0;
       for(i=0; i<N; i++){  
         cash[i] = capital[i];
         total_capital += capital[i];
+	cum_capital[i+1] = total_capital;
       }
-
-        totalGoodsValue_perM=0.;
+      assert(cum_capital[1] == capital[0]);
+      assert(cum_capital[N] == total_capital);
+      totalGoodsValue_perM = 0.;
       for(k=0; k<K; k++){
         totalGoodsValue_perM += Mk_relative(k) * PI_0 * pow(G, k);
       }
@@ -205,8 +210,10 @@ void run_trading_instance(int N, double * capital, double * cash, double * pct_s
     read_from_state_files( capital, cash, goods, goods_type, M, M_user, N);
 
       total_capital = 0;
+      cum_capital[0] = 0;
       for(i=0; i<N; i++){  
         total_capital += capital[i];
+	cum_capital[i+1] = total_capital;
       }
       	
       totalGoodsValue_perM=0.;
@@ -300,7 +307,7 @@ void run_trading_instance(int N, double * capital, double * cash, double * pct_s
 	      good_traded will return c from 0 to M-1 in case good c is chosen and traded
 	      it will return c from -1 to -M in case good -c-1 (sorry) is chosen 
 	      and fails to trade */
-	    good_traded = attempt_trade(N, M, goods, goods_type, cash, Z, r);
+	good_traded = attempt_trade(N, M, goods, goods_type, cum_capital, cash, Z, r);
 	    
 	
 	    if(t == T_Term && t_M ==0){printf("starting the recording - as if we were thermalized: now.\n");}
@@ -619,15 +626,38 @@ void distribute_goods_clever(int N, int M, int Mcontrol, int * goods, int * good
 
 
 
-int attempt_trade(int N, int M, int * goods, int * goods_type, double * cash, int ** Z, gsl_rng * r){
+int attempt_trade(int N, int M, int * goods, int * goods_type, double * cum_capital, double * cash, int ** Z, gsl_rng * r){
   
-  int i, j, c, k, kind;
-  int print_flag = 0;
+  int i, j, c, k, s, kind;
+  int i_found, print_flag = 0;
   double pi;
+  double u, cap;
   c = gsl_rng_uniform_int(r,M);
   j = goods[c]; //owner of good c
   do{
-    i = gsl_rng_uniform_int(r, N);
+    // i = gsl_rng_uniform_int(r, N);  //old, random choice
+    k = gsl_rng_uniform_int(r, 50) + 1;
+    s = gsl_rng_uniform_int(r, 2);
+    s = 2*s - 1;
+    assert(s == 1 || s == -1);
+    i = j + s * k;
+    if(i < 0){
+      if(j==0) i = 1;
+      else i = 0;
+    }
+    if(i > N - 1){
+      if(j == N - 1) i = N - 2;
+      else i = N - 1;
+    }
+    /* u = gsl_rng_uniform(r); */
+    /* cap = u * cum_capital[N-1]; */
+    /* i_found = 0; */
+    /* i = 0; */
+    /* while(i_found == 0){ */
+    /*   if(cum_capital[i+1] < cap) i++; */
+    /*   else i_found = 1;       */
+    /* } */
+    //printf("Agent chosen for trade: %d, cum_capital: %.3f - %.3f, cap = %.3f\n", i, cum_capital[i], cum_capital[i+1], cap);
   }while(i==j);
   pi = price(c, goods_type);
   if(cash[i] >= pi){

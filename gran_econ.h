@@ -22,7 +22,7 @@ void generate_adjusted_capital(int N, double * capital, double beta, gsl_rng * r
 void generate_bimodal_capital(int N, double * capital);
 void generate_staircase_capital(int N, double * capital, double beta);
 void read_from_state_files( double * capital, double * cash, int * goods, int * good_type, const int M, const int M_user, const int N);
-int attempt_trade(int N, int M, int * goods, int * goods_type, double * cash, int ** Z, gsl_rng * r);
+int attempt_trade(int N, int M, int * goods, int * goods_type, double * cum_capital, double * cash, int ** Z, gsl_rng * r);
 void calc_ownership(int N, int M, int * goods, int * goods_type, double * capital, int verbose, int verbose_file, float beta, float capital_goods_ratio);
 void build_Z(int M, int N, int * goods, int * goods_type, int ** Z);
 void update_ownership(int N, int ** Z, double ** ownership_average);
